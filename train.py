@@ -32,7 +32,7 @@ def train(
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
     net = ConvTumorDetector(in_channels=3, num_classes=2)
-    net.cuda()
+    net.to(device)
     optim = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=1e-4)
 
     global_step = 0
@@ -48,7 +48,7 @@ def train(
 
             # forward pass
             outputs = net(images)
-            loss = torch.nn.functional.cross_entropy(outputs, masks)
+            loss = torch.nn.functional.binary_cross_entropy_with_logits(outputs, masks)
 
 
             # backward pass
@@ -63,7 +63,7 @@ def train(
         writer.add_scalar("epoch", epoch, epoch)
 
         writer.flush()
-        
+        print(epoch, epoch+1 % 10 == 0)
         if epoch+1 % 10 == 0:
                 print(f"Saving model at epoch {epoch}")
                 torch.save(net.state_dict(), f"{exp_dir}/model_epoch_{epoch}.pth")
