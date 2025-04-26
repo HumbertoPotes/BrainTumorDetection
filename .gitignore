@@ -1,0 +1,5 @@
+# Ignore environment folder
+btd_env/
+logs/
+runs/
+__pycache__/

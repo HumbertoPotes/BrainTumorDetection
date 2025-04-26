@@ -12,9 +12,8 @@ class BrainTumorDataset(Dataset):
     def __init__(self, dataset):
         super().__init__()
         self.dataset = dataset
-        self.image_size = (256, 256)
+        self.image_size = (640, 640)
         self.transform = transforms.Compose([
-            transforms.Grayscale(num_output_channels=1), # convert to grayscale mode
             transforms.Resize(self.image_size),
             transforms.ToTensor(),
         ])
@@ -40,10 +39,7 @@ class BrainTumorDataset(Dataset):
         cv2.fillPoly(mask, [pts], 1) # fill the polygon indicating tumor with ones (zeroes indicate no tumor)
 
         # print(f"Mask area: {mask.sum()}, Truth area: {sample['area']}") # check if the mask area matches the truth area of the tumor
-
         image_tensor = self.transform(image)
         mask_tensor = torch.from_numpy(np.array(Image.fromarray(mask).resize(self.image_size, Image.NEAREST))).long()
 
         return image_tensor, mask_tensor
-
-    
