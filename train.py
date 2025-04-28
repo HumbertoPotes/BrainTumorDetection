@@ -49,8 +49,8 @@ def train(
 
             # forward pass
             outputs = net(images)
-            loss = torch.nn.functional.cross_entropy(outputs, masks)
-            losses.append(loss.item())
+            loss = torch.nn.functional.binary_cross_entropy_with_logits(outputs, masks.float())
+
 
             # backward pass
             optim.zero_grad()
@@ -64,9 +64,8 @@ def train(
         writer.add_scalar("epoch", epoch, epoch)
 
         writer.flush()
-        print(epoch, epoch+1 % 10 == 0)
-        print(f"Epoch {epoch}: loss = {sum(losses)/len(losses)}")
-        if epoch+1 % 10 == 0:
+        
+        if (epoch+1) % 10 == 0:
                 print(f"Saving model at epoch {epoch}")
                 torch.save(net.state_dict(), f"{exp_dir}/model_epoch_{epoch}.pth")
 
