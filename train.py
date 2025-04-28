@@ -31,7 +31,7 @@ def train(
     train_dataset = BrainTumorDataset(dataset['train'])
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-    net = ConvTumorDetector(in_channels=3, num_classes=2)
+    net = ConvTumorDetector(in_channels=1, num_classes=2)
     net.to(device)
     optim = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=1e-4)
 
@@ -41,6 +41,7 @@ def train(
     for epoch in range(num_epoch):
 
         net.train()
+        losses = []
         for images, masks in train_loader:
             # move images to the device
             images = images.to(device)
@@ -48,8 +49,8 @@ def train(
 
             # forward pass
             outputs = net(images)
-            loss = torch.nn.functional.binary_cross_entropy_with_logits(outputs, masks)
-
+            loss = torch.nn.functional.cross_entropy(outputs, masks)
+            losses.append(loss.item())
 
             # backward pass
             optim.zero_grad()
@@ -64,6 +65,7 @@ def train(
 
         writer.flush()
         print(epoch, epoch+1 % 10 == 0)
+        print(f"Epoch {epoch}: loss = {sum(losses)/len(losses)}")
         if epoch+1 % 10 == 0:
                 print(f"Saving model at epoch {epoch}")
                 torch.save(net.state_dict(), f"{exp_dir}/model_epoch_{epoch}.pth")

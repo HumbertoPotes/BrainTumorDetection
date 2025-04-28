@@ -45,7 +45,7 @@ class ConvTumorDetector(nn.Module):
 
     def __init__(
         self,
-        in_channels: int = 3,
+        in_channels: int = 1,
         num_classes: int = 2,
     ):
         super().__init__()
@@ -60,7 +60,7 @@ class ConvTumorDetector(nn.Module):
             torch.nn.ReLU(),
         ]
         layers = []
-        in_channels = 3
+        in_channels = 1
         #in_channels = out_channels
         for i in range(1,down_layers+1):
             out_channels = out_channels * 2
