@@ -80,14 +80,15 @@ def train(
                 loss_fn = torch.nn.functional.binary_cross_entropy_with_logits(outputs, masks.float())
                 val_losses.append(loss_fn.item())
 
+        # log the losses
         train_loss = sum(train_losses)/len(train_losses)
         val_loss = sum(val_losses)/len(val_losses)
         writer.add_scalar("train/loss", train_loss, global_step=epoch+1)
         writer.add_scalar("val/loss", val_loss, global_step=epoch+1)
-        # writer.add_scalar("epoch", epoch, epoch)
         writer.flush()
         print(f"Epoch {epoch+1}/{num_epoch}, Training Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}")
         
+        # save the model every 10 epochs
         if (epoch+1) % 10 == 0:
             print(f"Saving model at epoch {epoch+1}")
             torch.save(net.state_dict(), f"{exp_dir}/model_epoch_{epoch+1}.pth")
