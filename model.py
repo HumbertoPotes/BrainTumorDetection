@@ -55,23 +55,23 @@ class ConvTumorDetector(nn.Module):
         out_channels = 16
         down_layers = 4
 
-        layers = [
-            torch.nn.Conv2d(in_channels, out_channels, kernel_size=11, stride=2, padding=5),
-            torch.nn.ReLU(),
-        ]
+        # layers = [
+        #     torch.nn.Conv2d(in_channels, out_channels, kernel_size=11, stride=2, padding=5),
+        #     torch.nn.ReLU(),
+        # ]
         layers = []
         # in_channels = 1
         #in_channels = out_channels
-        for i in range(1,down_layers+1):
+        for _ in range(1,down_layers+1):
             out_channels = out_channels * 2
             layers.append(self.DownBlock(in_channels, out_channels))
             in_channels = out_channels
-        for i in range(1,3):
+        for _ in range(1,3):
             out_channels = in_channels // 2 
             layers.append(self.UpBlock(in_channels, out_channels))
             in_channels = out_channels // 2
         
-        layers.append(torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0))
+        layers.append(torch.nn.Conv2d(in_channels, 1, kernel_size=1, stride=1, padding=0))
         self.model = torch.nn.Sequential(*layers)
 
 
