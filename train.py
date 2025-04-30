@@ -5,10 +5,11 @@ import torch
 from dataset import BrainTumorDataset
 from model import ConvTumorDetector
 from torch.utils.tensorboard import SummaryWriter
+from metrics import compute_iou, false_positive_penalty_iou
 
 def train(
     exp_dir: str = "logs",
-    num_epoch: int = 30,
+    num_epoch: int = 50,
     lr: float = 1e-3,
     batch_size: int = 16,
 ):
@@ -40,9 +41,11 @@ def train(
     val_dataset = BrainTumorDataset(dataset['valid'])
     val_loader = DataLoader(val_dataset, batch_size=batch_size)
 
-    net = ConvTumorDetector(in_channels=1, num_classes=2)
+    pos_w = 0.5
+    net = ConvTumorDetector(in_channels=1, num_classes=1)
     net.to(device)
     optim = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=1e-4)
+    
 
     print(f"Starting training for {num_epoch} epochs")
     for epoch in range(num_epoch):
@@ -57,8 +60,9 @@ def train(
 
             # forward pass
             outputs = net(images)
-            loss_fn = torch.nn.functional.binary_cross_entropy_with_logits(outputs, masks.float())
+            loss_fn = torch.nn.BCEWithLogitsLoss(outputs, masks.float(), pos_weight=torch.tensor([pos_w]).to(device))
             train_losses.append(loss_fn.item())
+            train_iou = compute_iou(outputs, masks.float())
 
             # backward pass
             optim.zero_grad()
@@ -79,21 +83,28 @@ def train(
                 outputs = net(images)
                 loss_fn = torch.nn.functional.binary_cross_entropy_with_logits(outputs, masks.float())
                 val_losses.append(loss_fn.item())
+                val_iou = compute_iou(outputs, masks.float())
+                fpp_iou = false_positive_penalty_iou(outputs, masks.float())
+                
 
         # log the losses
         train_loss = sum(train_losses)/len(train_losses)
         val_loss = sum(val_losses)/len(val_losses)
         writer.add_scalar("train/loss", train_loss, global_step=epoch+1)
+        writer.add_scalar("train/IoU", train_iou, global_step=epoch+1)
+        writer.add_scalar("train/fpp_iou", fpp_iou, global_step=epoch+1)
         writer.add_scalar("val/loss", val_loss, global_step=epoch+1)
+        writer.add_scalar("val/IoU", val_iou, global_step=epoch+1)
+        writer.add_scalar("val/fpp_iou", fpp_iou, global_step=epoch+1)
         writer.flush()
-        print(f"Epoch {epoch+1}/{num_epoch}, Training Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}")
+        #print(f"Epoch {epoch+1}/{num_epoch}, Training Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}")
         
         # save the model every 10 epochs
         if (epoch+1) % 10 == 0:
             print(f"Saving model at epoch {epoch+1}")
-            torch.save(net.state_dict(), f"{exp_dir}/model_epoch_{epoch+1}.pth")
+            torch.save(net.state_dict(), f"{exp_dir}/model_epoch_{epoch+1}_w05.pth")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_epoch", type=int, default=30)
+    # parser.add_argument("--num_epoch", type=int, default=30)
     train(**vars(parser.parse_args()))
