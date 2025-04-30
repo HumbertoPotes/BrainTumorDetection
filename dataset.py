@@ -14,6 +14,7 @@ class BrainTumorDataset(Dataset):
         self.dataset = dataset
         self.image_size = (640, 640)
         self.transform = transforms.Compose([
+            transforms.Grayscale(num_output_channels=1),
             transforms.Resize(self.image_size),
             transforms.ToTensor(),
         ])
