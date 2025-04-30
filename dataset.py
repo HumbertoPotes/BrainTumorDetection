@@ -34,6 +34,7 @@ class BrainTumorDataset(Dataset):
         sample = self.dataset[idx]
         image = sample['image']
         segmentation = sample['segmentation'][0]
+        category = sample['category_id']
 
         mask = np.zeros((image.height, image.width), dtype=np.uint8)
         pts = np.array(segmentation, dtype=np.int32).reshape(-1, 2)
@@ -42,5 +43,6 @@ class BrainTumorDataset(Dataset):
         # print(f"Mask area: {mask.sum()}, Truth area: {sample['area']}") # check if the mask area matches the truth area of the tumor
         image_tensor = self.transform(image)
         mask_tensor = torch.from_numpy(np.array(Image.fromarray(mask).resize(self.image_size, Image.NEAREST))).long()
+        category_tensor = (torch.tensor(category, dtype=torch.long)) - 1 # convert to 0-indexed (0 is tumor, 1 is normal)
 
-        return image_tensor, mask_tensor
+        return image_tensor, mask_tensor, category_tensor
