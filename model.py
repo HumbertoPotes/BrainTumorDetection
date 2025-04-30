@@ -45,7 +45,7 @@ class ConvTumorDetector(nn.Module):
 
     def __init__(
         self,
-        in_channels: int = 3,
+        in_channels: int = 1,
         num_classes: int = 2,
     ):
         super().__init__()
@@ -75,7 +75,9 @@ class ConvTumorDetector(nn.Module):
 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.model(x).squeeze(1)#.argmax(dim=1).float()
+        # shared_out = self.up2(self.up1(self.db4(self.db3(self.db2(self.db1(x))))))
+        # return self.logitshead(shared_out)
+        return self.model(x).squeeze(1)#.argmax(dim=1)
 
 
     # def predict(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
