@@ -133,11 +133,11 @@ def train(
 
         writer.flush()
 
-        print(
-            f"Epoch {epoch+1}/{num_epoch}: \n" 
-            f"Training Loss - Total: {train_total_loss:.4f}, Segmentation: {train_seg_loss:.4f}, Category: {train_cat_loss:.4f} \n"
-            f"Validation Loss - Total: {val_total_loss:.4f}, Segmentation: {val_seg_loss:.4f}, Category: {val_cat_loss:.4f} "
-        )
+        # print(
+        #     f"Epoch {epoch+1}/{num_epoch}: \n" 
+        #     f"Training Loss - Total: {train_total_loss:.4f}, Segmentation: {train_seg_loss:.4f}, Category: {train_cat_loss:.4f} \n"
+        #     f"Validation Loss - Total: {val_total_loss:.4f}, Segmentation: {val_seg_loss:.4f}, Category: {val_cat_loss:.4f} "
+        # )
         
         # save the model every 10 epochs
         if (epoch+1) % 10 == 0:

@@ -55,13 +55,13 @@ class ConvTumorDetector(nn.Module):
         out_channels = 16
         down_layers = 4
 
-        layers = [
-            torch.nn.Conv2d(in_channels, out_channels, kernel_size=11, stride=2, padding=5),
-            torch.nn.ReLU(),
-        ]
-        in_channels = out_channels
-        # layers = []
-        for _ in range(1,down_layers):
+        # layers = [
+        #     torch.nn.Conv2d(in_channels, out_channels, kernel_size=11, stride=2, padding=5),
+        #     torch.nn.ReLU(),
+        # ]
+        # in_channels = out_channels
+        layers = []
+        for _ in range(0,down_layers):
             out_channels = out_channels * 2
             layers.append(self.DownBlock(in_channels, out_channels))
             in_channels = out_channels
@@ -70,7 +70,7 @@ class ConvTumorDetector(nn.Module):
 
         layers = []
         
-        for _ in range(1,down_layers//2):
+        for _ in range(0,down_layers//2):
             out_channels = in_channels // 2 
             layers.append(self.UpBlock(in_channels, out_channels))
             in_channels = out_channels // 2
@@ -81,7 +81,7 @@ class ConvTumorDetector(nn.Module):
         )
         self.category_head = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(in_channels * h * w // (2 ** (down_layers-1)), 1)
+            nn.Linear(in_channels * h * w // (2 ** (down_layers)), 1)
         )
 
 
