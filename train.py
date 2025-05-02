@@ -6,6 +6,7 @@ from dataset import BrainTumorDataset
 from model import ConvTumorDetector
 from torch.utils.tensorboard import SummaryWriter
 from metrics import compute_iou, false_positive_penalty_iou
+from utils import clean_by_distance
 
 def train(
     exp_dir: str = "logs",
@@ -53,6 +54,7 @@ def train(
     pos_w = 0.5
     alpha = 0.9
     beta = 0.5
+    stdev_multiplier = 3.5
 
     print(f"Starting training for {num_epoch} epochs")
     for epoch in range(num_epoch):
@@ -68,21 +70,22 @@ def train(
         for images, masks, categories in train_loader:
             # move images to the device
             images = images.to(device)
-            masks = masks.to(device)
-            categories = categories.to(device)
+            masks = masks.to(device).float()
+            categories = categories.to(device).float()
 
             # forward pass and calculate loss
             masks_pred, categories_pred = net(images)
-            loss_seg = loss_fn_seg(masks_pred, masks.float())
-            loss_cat = loss_fn_cat(categories_pred, categories.float())
+            loss_seg = loss_fn_seg(masks_pred, masks)
+            loss_cat = loss_fn_cat(categories_pred, categories)
             total_loss = (alpha * loss_seg) + ((1-alpha) * loss_cat)
             train_seg_losses.append(loss_seg.item())
             train_cat_losses.append(loss_cat.item())
             train_total_losses.append(total_loss.item())
 
             # calculate metrics
-            train_iou = compute_iou(masks_pred, masks)
-            train_fpp_iou = false_positive_penalty_iou(masks_pred, masks)
+            iou_mask = clean_by_distance(masks_pred, threshold=0.5, stdev_multiplier=stdev_multiplier)
+            train_iou = compute_iou(iou_mask, masks)
+            train_fpp_iou = false_positive_penalty_iou(iou_mask, masks)
             train_total_iou = beta * train_iou + (1 - beta) * train_fpp_iou
 
             # backward pass
@@ -113,20 +116,21 @@ def train(
                 val_total_losses.append(total_loss.item())
 
                 # calculate metrics
-                val_iou = compute_iou(masks_pred, masks)
-                val_fpp_iou = false_positive_penalty_iou(masks_pred, masks)
+                iou_mask = clean_by_distance(masks_pred, threshold=0.5, stdev_multiplier=stdev_multiplier)   
+                val_iou = compute_iou(iou_mask, masks)
+                val_fpp_iou = false_positive_penalty_iou(iou_mask, masks)
                 val_total_iou = beta * val_iou + (1 - beta) * val_fpp_iou
                 
 
         # log the losses
-        train_seg_loss = sum(train_seg_losses)/len(train_seg_losses)
-        train_cat_loss = sum(train_cat_losses)/len(train_cat_losses)
+        # train_seg_loss = sum(train_seg_losses)/len(train_seg_losses)
+        # train_cat_loss = sum(train_cat_losses)/len(train_cat_losses)
         train_total_loss = sum(train_total_losses)/len(train_total_losses)
         writer.add_scalar("train/total_loss", train_total_loss, global_step=epoch+1)
         writer.add_scalar("train/total_IoU", train_total_iou, global_step=epoch+1)
 
-        val_seg_loss = sum(val_seg_losses)/len(val_seg_losses)
-        val_cat_loss = sum(val_cat_losses)/len(val_cat_losses)
+        # val_seg_loss = sum(val_seg_losses)/len(val_seg_losses)
+        # val_cat_loss = sum(val_cat_losses)/len(val_cat_losses)
         val_total_loss = sum(val_total_losses)/len(val_total_losses)
         writer.add_scalar("val/total_loss", val_total_loss, global_step=epoch+1)
         writer.add_scalar("val/total_IoU", val_total_iou, global_step=epoch+1)
@@ -142,7 +146,7 @@ def train(
         # save the model every 10 epochs
         if (epoch+1) % 10 == 0:
             print(f"Saving model at epoch {epoch+1}")
-            torch.save(net.state_dict(), f"{exp_dir}/model_epoch_{epoch+1}_w05.pth")
+            #torch.save(net.state_dict(), f"{exp_dir}/model_epoch_{epoch+1}.pth")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
