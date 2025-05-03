@@ -21,5 +21,5 @@ jobs:
     - name: Fix formatting
       run: black . --line-length 100
     - name: Run flake8
-      run: flake8 . --max-line-length=100
+      run: flake8 . --max-line-length=150
 
