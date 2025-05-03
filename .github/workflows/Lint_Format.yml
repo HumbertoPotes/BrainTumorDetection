@@ -15,7 +15,8 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      run: python -m pip install --upgrade pip
+      run: |
+          python -m pip install --upgrade pip
           pip install black flake8
     - name: Fix formatting
       run: black . --line-length 100
