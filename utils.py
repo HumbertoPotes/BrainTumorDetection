@@ -12,6 +12,17 @@ def sigmoid_to_binary(pred_mask, threshold=0.5):
     return pred_bin
 
 
+def nanstd(tensor):
+    mask = ~torch.isnan(tensor)
+    count = mask.sum(dim=1, keepdim=True)
+    mean = torch.nan_to_num(tensor, nan=0.0).sum(dim=1, keepdim=True) / count
+    var = (
+        torch.nan_to_num(((tensor - mean) ** 2), nan=0.0).sum(dim=1, keepdim=True)
+        / count
+    )
+    return torch.sqrt(var)
+
+
 def clean_by_distance(pred_mask, threshold=0.5, stdev_multiplier=3.5):
 
     B, H, W = pred_mask.shape
@@ -37,13 +48,13 @@ def clean_by_distance(pred_mask, threshold=0.5, stdev_multiplier=3.5):
 
     # Keep only pixels close to the center
     masked_mask = bin_mask.view(B, -1) == 1
-    std_devs = (
-        dist_to_center.view(B, -1)
-        .masked_select(masked_mask)
-        .view(B, -1)
-        .std(dim=1, keepdim=True)
-        .view(B, 1, 1)
-    )
+    std_devs = nanstd(
+        torch.where(
+            masked_mask,
+            dist_to_center.view(B, -1),
+            torch.tensor(float("nan"), device=device),
+        )
+    ).view(B, 1, 1)
     cleaned = ((bin_mask == 1) & (dist_to_center <= stdev_multiplier * std_devs)).to(
         torch.uint8
     )
