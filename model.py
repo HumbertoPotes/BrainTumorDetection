@@ -1,12 +1,13 @@
 import torch
 import torch.nn as nn
 
+
 class ConvTumorDetector(nn.Module):
     class DownBlock(nn.Module):
         def __init__(self, in_channels, out_channels):
             super().__init__()
             kernel_size = 3
-            padding = (kernel_size-1)//2
+            padding = (kernel_size - 1) // 2
             stride = 2
 
             self.model = nn.Sequential(
@@ -15,7 +16,7 @@ class ConvTumorDetector(nn.Module):
                 nn.ReLU(),
                 nn.Conv2d(out_channels, out_channels, kernel_size, 1, padding),
                 nn.GroupNorm(1, out_channels),
-                nn.ReLU()
+                nn.ReLU(),
             )
 
             # residual connection
@@ -31,13 +32,27 @@ class ConvTumorDetector(nn.Module):
         def __init__(self, in_channels, out_channels):
             super().__init__()
             kernel_size = 3
-            padding = (kernel_size-1)//2
+            padding = (kernel_size - 1) // 2
             stride = 2
             self.model = nn.Sequential(
-                nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding, output_padding=1),
+                nn.ConvTranspose2d(
+                    in_channels,
+                    out_channels,
+                    kernel_size,
+                    stride,
+                    padding,
+                    output_padding=1,
+                ),
                 nn.ReLU(),
-                nn.ConvTranspose2d(out_channels, out_channels//2, kernel_size, stride, padding, output_padding=1),
-                nn.ReLU()
+                nn.ConvTranspose2d(
+                    out_channels,
+                    out_channels // 2,
+                    kernel_size,
+                    stride,
+                    padding,
+                    output_padding=1,
+                ),
+                nn.ReLU(),
             )
 
         def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -59,10 +74,9 @@ class ConvTumorDetector(nn.Module):
         #     torch.nn.Conv2d(in_channels, out_channels, kernel_size=11, stride=2, padding=5),
         #     torch.nn.ReLU(),
         # ]
+        # in_channels = out_channels
         layers = []
-        # in_channels = 1
-        #in_channels = out_channels
-        for _ in range(1,down_layers+1):
+        for _ in range(0, down_layers):
             out_channels = out_channels * 2
             layers.append(self.DownBlock(in_channels, out_channels))
             in_channels = out_channels
@@ -70,31 +84,21 @@ class ConvTumorDetector(nn.Module):
         self.network = torch.nn.Sequential(*layers)
 
         layers = []
-        
-        for _ in range(1,3):
-            out_channels = in_channels // 2 
+
+        for _ in range(0, down_layers // 2):
+            out_channels = in_channels // 2
             layers.append(self.UpBlock(in_channels, out_channels))
             in_channels = out_channels // 2
 
         self.segmentation_head = torch.nn.Sequential(
-            *layers,
-            torch.nn.Conv2d(in_channels, num_classes, kernel_size=1)
+            *layers, torch.nn.Conv2d(in_channels, num_classes, kernel_size=1)
         )
         self.category_head = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(in_channels * h * w // (2 ** down_layers), 1)
+            nn.Flatten(), nn.Linear(in_channels * h * w // (2 ** (down_layers)), 1)
         )
 
-
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # shared_out = self.up2(self.up1(self.db4(self.db3(self.db2(self.db1(x))))))
-        # return self.logitshead(shared_out)
         features = self.network(x)
-        return self.segmentation_head(features).squeeze(1), self.category_head(features).squeeze(1)
-
-
-    # def predict(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    #     logits = self(x)
-    #     pred = logits
-
-    #     return pred
+        return self.segmentation_head(features).squeeze(1), self.category_head(
+            features
+        ).squeeze(1)
