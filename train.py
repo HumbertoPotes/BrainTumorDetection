@@ -8,6 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 from metrics import compute_iou, false_positive_penalty_iou
 from utils import clean_by_distance
 
+
 def train(
     exp_dir: str = "logs",
     num_epoch: int = 50,
@@ -16,7 +17,7 @@ def train(
 ):
     print("Starting training...")
     writer = SummaryWriter()
-    
+
     # set device to GPU if available or MPS if on MacOS
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -27,7 +28,9 @@ def train(
     print(f"Using device: {device}")
 
     # set random seed for reproducibility
-    torch.manual_seed(2025) # the year the Texas Longhorns win the national championship
+    torch.manual_seed(
+        2025
+    )  # the year the Texas Longhorns win the national championship
     torch.cuda.manual_seed(2025) if device == torch.device("cuda") else None
     torch.backends.mps.manual_seed(2025) if device == torch.device("mps") else None
     torch.backends.cudnn.deterministic = True
@@ -37,18 +40,20 @@ def train(
     dataset = load_dataset("dwb2023/brain-tumor-image-dataset-semantic-segmentation")
 
     # load the training dataset
-    train_dataset = BrainTumorDataset(dataset['train'])
+    train_dataset = BrainTumorDataset(dataset["train"])
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_dataset = BrainTumorDataset(dataset['valid'])
+    val_dataset = BrainTumorDataset(dataset["valid"])
     val_loader = DataLoader(val_dataset, batch_size=batch_size)
 
     net = ConvTumorDetector(in_channels=1, num_classes=1)
     net.to(device)
-    optim = torch.optim.AdamW([
-        {"params": net.network.parameters(), "lr": lr},
-        {"params": net.segmentation_head.parameters(), "lr": lr},
-        {"params": net.category_head.parameters(), "lr": lr / 100}
-    ])
+    optim = torch.optim.AdamW(
+        [
+            {"params": net.network.parameters(), "lr": lr},
+            {"params": net.segmentation_head.parameters(), "lr": lr},
+            {"params": net.category_head.parameters(), "lr": lr / 100},
+        ]
+    )
 
     # hyperparameters
     pos_w = 0.5
@@ -63,9 +68,10 @@ def train(
         train_seg_losses = []
         train_cat_losses = []
         train_total_losses = []
-        loss_fn_seg = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor([pos_w]).to(device))
+        loss_fn_seg = torch.nn.BCEWithLogitsLoss(
+            pos_weight=torch.tensor([pos_w]).to(device)
+        )
         loss_fn_cat = torch.nn.BCEWithLogitsLoss()
-        
 
         for images, masks, categories in train_loader:
             # move images to the device
@@ -77,13 +83,15 @@ def train(
             masks_pred, categories_pred = net(images)
             loss_seg = loss_fn_seg(masks_pred, masks)
             loss_cat = loss_fn_cat(categories_pred, categories)
-            total_loss = (alpha * loss_seg) + ((1-alpha) * loss_cat)
+            total_loss = (alpha * loss_seg) + ((1 - alpha) * loss_cat)
             train_seg_losses.append(loss_seg.item())
             train_cat_losses.append(loss_cat.item())
             train_total_losses.append(total_loss.item())
 
             # calculate metrics
-            iou_mask = clean_by_distance(masks_pred, threshold=0.5, stdev_multiplier=stdev_multiplier)
+            iou_mask = clean_by_distance(
+                masks_pred, threshold=0.5, stdev_multiplier=stdev_multiplier
+            )
             train_iou = compute_iou(iou_mask, masks)
             train_fpp_iou = false_positive_penalty_iou(iou_mask, masks)
             train_total_iou = beta * train_iou + (1 - beta) * train_fpp_iou
@@ -110,43 +118,45 @@ def train(
                 masks_pred, categories_pred = net(images)
                 loss_seg = loss_fn_seg(masks_pred, masks)
                 loss_cat = loss_fn_cat(categories_pred, categories)
-                total_loss = (alpha * loss_seg) + ((1-alpha) * loss_cat)
+                total_loss = (alpha * loss_seg) + ((1 - alpha) * loss_cat)
                 val_seg_losses.append(loss_seg.item())
                 val_cat_losses.append(loss_cat.item())
                 val_total_losses.append(total_loss.item())
 
                 # calculate metrics
-                iou_mask = clean_by_distance(masks_pred, threshold=0.5, stdev_multiplier=stdev_multiplier)   
+                iou_mask = clean_by_distance(
+                    masks_pred, threshold=0.5, stdev_multiplier=stdev_multiplier
+                )
                 val_iou = compute_iou(iou_mask, masks)
                 val_fpp_iou = false_positive_penalty_iou(iou_mask, masks)
                 val_total_iou = beta * val_iou + (1 - beta) * val_fpp_iou
-                
 
         # log the losses
         # train_seg_loss = sum(train_seg_losses)/len(train_seg_losses)
         # train_cat_loss = sum(train_cat_losses)/len(train_cat_losses)
-        train_total_loss = sum(train_total_losses)/len(train_total_losses)
-        writer.add_scalar("train/total_loss", train_total_loss, global_step=epoch+1)
-        writer.add_scalar("train/total_IoU", train_total_iou, global_step=epoch+1)
+        train_total_loss = sum(train_total_losses) / len(train_total_losses)
+        writer.add_scalar("train/total_loss", train_total_loss, global_step=epoch + 1)
+        writer.add_scalar("train/total_IoU", train_total_iou, global_step=epoch + 1)
 
         # val_seg_loss = sum(val_seg_losses)/len(val_seg_losses)
         # val_cat_loss = sum(val_cat_losses)/len(val_cat_losses)
-        val_total_loss = sum(val_total_losses)/len(val_total_losses)
-        writer.add_scalar("val/total_loss", val_total_loss, global_step=epoch+1)
-        writer.add_scalar("val/total_IoU", val_total_iou, global_step=epoch+1)
+        val_total_loss = sum(val_total_losses) / len(val_total_losses)
+        writer.add_scalar("val/total_loss", val_total_loss, global_step=epoch + 1)
+        writer.add_scalar("val/total_IoU", val_total_iou, global_step=epoch + 1)
 
         writer.flush()
 
         # print(
-        #     f"Epoch {epoch+1}/{num_epoch}: \n" 
+        #     f"Epoch {epoch+1}/{num_epoch}: \n"
         #     f"Training Loss - Total: {train_total_loss:.4f}, Segmentation: {train_seg_loss:.4f}, Category: {train_cat_loss:.4f} \n"
         #     f"Validation Loss - Total: {val_total_loss:.4f}, Segmentation: {val_seg_loss:.4f}, Category: {val_cat_loss:.4f} "
         # )
-        
+
         # save the model every 10 epochs
-        if (epoch+1) % 10 == 0:
+        if (epoch + 1) % 10 == 0:
             print(f"Saving model at epoch {epoch+1}")
-            #torch.save(net.state_dict(), f"{exp_dir}/model_epoch_{epoch+1}.pth")
+            # torch.save(net.state_dict(), f"{exp_dir}/model_epoch_{epoch+1}.pth")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
