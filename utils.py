@@ -3,6 +3,7 @@ from numpy import empty, uint8
 from matplotlib import pyplot as plt
 from cv2 import boundingRect
 import matplotlib.patches as patches
+from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 
 def sigmoid_to_binary(pred_mask, threshold=0.5):
@@ -65,9 +66,9 @@ def clean_by_distance(pred_mask, threshold=0.5, stdev_multiplier=3.5):
 def visualize_comparisons(
     image_np, pred_mask, pred_cat, true_mask, true_cat, batch_size
 ):
-    hsize = batch_size * 6 if batch_size > 1 else 8
-    wsize = batch_size * 4 if batch_size > 1 else 6
-    fig, axs = plt.subplots(batch_size, 2, figsize=(hsize, wsize))
+    wsize = batch_size * 6 if batch_size > 1 else 8
+    hsize = batch_size * 4 if batch_size > 1 else 6
+    fig, axs = plt.subplots(batch_size, 2, figsize=(wsize, hsize))
 
     if batch_size == 1:
         axs = axs.reshape(1, 2)
@@ -125,7 +126,7 @@ def visualize_comparisons(
             axs[i, 1].set_title("Mask Comparison", fontsize=14)
 
     fig.suptitle(
-        f"Visualization of the Network's Predictions",
+        "Visualization of the Network's Predictions",
     fontsize=16
     )
     fig.text(0.5, 0.9, 
@@ -135,5 +136,51 @@ def visualize_comparisons(
     
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.subplots_adjust(wspace=-0.5)
+
+    return fig, axs
+
+def tensorboard_log(
+    logs_dict, folder_path, train_or_val, metric,
+):
+    # folder_path example: runs/May04_01-37-41_COMPUTER_NAME
+    ea = EventAccumulator(folder_path)  # path to a specific run
+    ea.Reload()
+
+    scalars = ea.Scalars(f'{train_or_val}/{metric}')
+    steps = [s.step for s in scalars]
+    values = [s.value for s in scalars]
+
+    if train_or_val == "val":
+        train_or_val = "Validation"
+    else:
+        train_or_val = "Train"
+
+    dict_key = f"{train_or_val} {metric}"
+    logs_dict[dict_key] = (steps, values)
+
+    return logs_dict
+
+
+def visualization_of_logs(
+        logs_dict
+    ):
+    n_graphs = len(logs_dict)
+    title_graphs = list(logs_dict.keys())
+    hsize = n_graphs * 3
+    fig, axs = plt.subplots(n_graphs, 1, figsize=(8, hsize))
+    axs = [axs] if n_graphs == 1 else axs
+
+    for i, (key,val) in enumerate(logs_dict.items()):
+        steps, values = val
+        axs[i].plot(steps, values)
+
+        metric = key.split(" ")[1]
+
+        plt.xlabel("Epoch")
+        plt.ylabel(f"{metric}")
+        axs[i].set_title(f"{title_graphs[i]}")
+        if i < n_graphs - 1:
+            axs[i].set_xticklabels([])
+            axs[i].set_xticks([])
 
     return fig, axs

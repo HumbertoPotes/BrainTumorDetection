@@ -138,7 +138,7 @@ def train(
                 val_iou = compute_iou(iou_mask, masks)
                 val_fpp_iou = false_positive_penalty_iou(iou_mask, masks)
                 val_total_iou = beta * val_iou + (1 - beta) * val_fpp_iou
-                val_acum_iou.append(train_total_iou)
+                val_acum_iou.append(val_total_iou)
                 # category metrics
                 val_acc = accuracy(categories_pred, categories, threshold=0.5)
                 val_acum_acc.append(val_acc)
@@ -148,6 +148,7 @@ def train(
         # train_cat_loss = sum(train_cat_losses)/len(train_cat_losses)
         train_total_loss = sum(train_total_losses) / len(train_total_losses)
         train_total_acc = sum(train_acum_acc) / len(train_acum_acc)
+        train_total_iou = sum(train_acum_iou) / len(train_acum_iou)
         writer.add_scalar("train/total_loss", train_total_loss, global_step=epoch + 1)
         writer.add_scalar("train/total_IoU", train_total_iou, global_step=epoch + 1)
         writer.add_scalar(
@@ -158,6 +159,7 @@ def train(
         # val_cat_loss = sum(val_cat_losses)/len(val_cat_losses)
         val_total_loss = sum(val_total_losses) / len(val_total_losses)
         val_total_acc = sum(val_acum_acc) / len(val_acum_acc)
+        val_total_iou = sum(val_acum_iou) / len(val_acum_iou)
         writer.add_scalar("val/total_loss", val_total_loss, global_step=epoch + 1)
         writer.add_scalar("val/total_IoU", val_total_iou, global_step=epoch + 1)
         writer.add_scalar("val/total_accuracy", val_total_acc, global_step=epoch + 1)
