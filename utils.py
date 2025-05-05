@@ -65,8 +65,8 @@ def clean_by_distance(pred_mask, threshold=0.5, stdev_multiplier=3.5):
 def visualize_comparisons(
     image_np, pred_mask, pred_cat, true_mask, true_cat, batch_size
 ):
-    hsize = batch_size * 5 if batch_size > 2 else 8
-    wsize = batch_size * 4 if batch_size > 2 else 6
+    hsize = batch_size * 6 if batch_size > 1 else 8
+    wsize = batch_size * 4 if batch_size > 1 else 6
     fig, axs = plt.subplots(batch_size, 2, figsize=(hsize, wsize))
 
     if batch_size == 1:
@@ -121,13 +121,19 @@ def visualize_comparisons(
         axs[i, 1].set_axis_off()
 
         if i == 0:
-            axs[i, 0].set_title("Comparison of Bounding Boxes")
-            axs[i, 1].set_title("Comparison of Masks")
+            axs[i, 0].set_title("Bounding Box Comparison", fontsize=14)
+            axs[i, 1].set_title("Mask Comparison", fontsize=14)
 
     fig.suptitle(
-        f"""Visualization of the Network's Predictions
-    Original tumor category: {true_cat.int().tolist()} - Predicted tumor category: {pred_cat.int().tolist()}
-    """
+        f"Visualization of the Network's Predictions",
+    fontsize=16
     )
+    fig.text(0.5, 0.9, 
+        f"Original Tumor Category: {true_cat.int().tolist()} \nPredicted Tumor Category: {pred_cat.int().tolist()}",
+        ha='center', fontsize=12
+    )
+    
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    plt.subplots_adjust(wspace=-0.5)
 
     return fig, axs
