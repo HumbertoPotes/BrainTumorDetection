@@ -21,3 +21,10 @@ def false_positive_penalty_iou(pred_mask, true_mask, threshold=0.5):
 
     precision_iou = (tp + eps) / (tp + fp + eps)
     return precision_iou.mean().item()
+
+
+def accuracy(pred_cat, true_cat, threshold=0.5):
+    pred_cat = sigmoid_to_binary(pred_cat, threshold=threshold)
+    correct = (pred_cat == true_cat).sum().item()
+    total = pred_cat.size(0)
+    return correct / total

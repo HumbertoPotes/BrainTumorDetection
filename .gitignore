@@ -3,3 +3,4 @@ btd_env/
 logs/
 runs/
 __pycache__/
+config.json
