@@ -5,8 +5,7 @@ import torch
 from dataset import BrainTumorDataset
 from model import ConvTumorDetector
 from torch.utils.tensorboard import SummaryWriter
-from metrics import compute_iou, false_positive_penalty_iou, accuracy
-from utils import clean_by_distance
+from metrics import accuracy, masks_to_iou
 
 
 def train(
@@ -90,14 +89,10 @@ def train(
             train_cat_losses.append(loss_cat.item())
             train_total_losses.append(total_loss.item())
 
-            # calculate metrics
-            iou_mask = clean_by_distance(
-                masks_pred, threshold=0.5, stdev_multiplier=stdev_multiplier
-            )
-            train_iou = compute_iou(iou_mask, masks)
-            train_fpp_iou = false_positive_penalty_iou(iou_mask, masks)
-            train_total_iou = beta * train_iou + (1 - beta) * train_fpp_iou
-            train_acum_iou.append(train_total_iou)
+            # segmentation metrics
+            train_total_iou = masks_to_iou(masks_pred, masks, threshold=0.5, stdev_multiplier=stdev_multiplier, beta=beta)
+            train_acum_iou.extend(train_total_iou.tolist())
+
             # category metrics
             train_acc = accuracy(categories_pred, categories, threshold=0.5)
             train_acum_acc.append(train_acc)
@@ -131,21 +126,15 @@ def train(
                 val_cat_losses.append(loss_cat.item())
                 val_total_losses.append(total_loss.item())
 
-                # calculate metrics
-                iou_mask = clean_by_distance(
-                    masks_pred, threshold=0.5, stdev_multiplier=stdev_multiplier
-                )
-                val_iou = compute_iou(iou_mask, masks)
-                val_fpp_iou = false_positive_penalty_iou(iou_mask, masks)
-                val_total_iou = beta * val_iou + (1 - beta) * val_fpp_iou
-                val_acum_iou.append(val_total_iou)
+                # segmentation metrics
+                val_total_iou = masks_to_iou(masks_pred, masks, threshold=0.5, stdev_multiplier=stdev_multiplier, beta=beta)
+                val_acum_iou.extend(val_total_iou.tolist())
+
                 # category metrics
                 val_acc = accuracy(categories_pred, categories, threshold=0.5)
                 val_acum_acc.append(val_acc)
 
-        # log the losses
-        # train_seg_loss = sum(train_seg_losses)/len(train_seg_losses)
-        # train_cat_loss = sum(train_cat_losses)/len(train_cat_losses)
+        # log the losses and metrics
         train_total_loss = sum(train_total_losses) / len(train_total_losses)
         train_total_acc = sum(train_acum_acc) / len(train_acum_acc)
         train_total_iou = sum(train_acum_iou) / len(train_acum_iou)
@@ -155,8 +144,6 @@ def train(
             "train/total_accuracy", train_total_acc, global_step=epoch + 1
         )
 
-        # val_seg_loss = sum(val_seg_losses)/len(val_seg_losses)
-        # val_cat_loss = sum(val_cat_losses)/len(val_cat_losses)
         val_total_loss = sum(val_total_losses) / len(val_total_losses)
         val_total_acc = sum(val_acum_acc) / len(val_acum_acc)
         val_total_iou = sum(val_acum_iou) / len(val_acum_iou)

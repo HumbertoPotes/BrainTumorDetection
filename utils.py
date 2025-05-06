@@ -139,6 +139,7 @@ def visualize_comparisons(
 
     return fig, axs
 
+
 def tensorboard_log(
     logs_dict, folder_path, train_or_val, metric,
 ):
@@ -170,9 +171,16 @@ def visualization_of_logs(
     fig, axs = plt.subplots(n_graphs, 1, figsize=(8, hsize))
     axs = [axs] if n_graphs == 1 else axs
 
+    #colors = ['red', 'blue', 'green', 'orange', 'purple']
+    colors = ['#cba6f7', '#f5c2e7', '#b4befe', '#f2cdcd', '#a6d0f7']
+
     for i, (key,val) in enumerate(logs_dict.items()):
+        if i >= len(colors):
+            color = 'blue'
+        else:
+            color = colors[i]
         steps, values = val
-        axs[i].plot(steps, values)
+        axs[i].plot(steps, values, color = color)
 
         metric = key.split(" ")[1]
 
