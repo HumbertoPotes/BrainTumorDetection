@@ -10,7 +10,7 @@ from metrics import accuracy, masks_to_iou
 
 def train(
     exp_dir: str = "logs",
-    num_epoch: int = 50,
+    num_epoch: int = 100,
     lr: float = 1e-3,
     batch_size: int = 16,
 ):
@@ -39,7 +39,7 @@ def train(
     dataset = load_dataset("dwb2023/brain-tumor-image-dataset-semantic-segmentation")
 
     # load the training dataset
-    train_dataset = BrainTumorDataset(dataset["train"])
+    train_dataset = BrainTumorDataset(dataset["train"], augment=True)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_dataset = BrainTumorDataset(dataset["valid"])
     val_loader = DataLoader(val_dataset, batch_size=batch_size)

@@ -11,17 +11,14 @@ class BrainTumorDataset(Dataset):
     Custom dataset for loading brain tumor images.
     """
 
-    def __init__(self, dataset):
+    def __init__(self, dataset, augment=False):
         super().__init__()
         self.dataset = dataset
         self.image_size = (640, 640)
-        self.transform = transforms.Compose(
-            [
-                transforms.Grayscale(num_output_channels=1),
-                transforms.Resize(self.image_size),
-                transforms.ToTensor(),
-            ]
-        )
+        self.to_tensor = transforms.ToTensor()
+        self.to_grayscale = transforms.Grayscale(num_output_channels=1)
+        self.resize = transforms.Resize(self.image_size)
+        self.augment = augment
 
     def __len__(self):
         return len(self.dataset)
@@ -46,11 +43,30 @@ class BrainTumorDataset(Dataset):
             mask, [pts], 1
         )  # fill the polygon indicating tumor with ones (zeroes indicate no tumor)
 
+        # Preprocess the image and mask
+        mask = Image.fromarray(mask) # convert mask to PIL Image
+        mask = self.resize(mask)
+        image = self.to_grayscale(image)
+        image = self.resize(image)
+
+        # Apply augmentations if specified
+        if self.augment:
+            if np.random.rand() > 0.5:
+                image = transforms.functional.hflip(image)
+                mask = transforms.functional.hflip(mask)
+            if np.random.rand() > 0.5:
+                image = transforms.functional.vflip(image)
+                mask = transforms.functional.vflip(mask)
+            if np.random.rand() > 0.5:
+                angle = np.random.randint(-30, 30)
+                image = transforms.functional.rotate(image, angle)
+                mask = transforms.functional.rotate(mask, angle)
+
         # print(f"Mask area: {mask.sum()}, Truth area: {sample['area']}") # check if the mask area matches the truth area of the tumor
-        image_tensor = self.transform(image)
-        mask_tensor = torch.from_numpy(
-            np.array(Image.fromarray(mask).resize(self.image_size, Image.NEAREST))
-        ).long()
+
+        # Final conversion to tensors
+        image_tensor = self.to_tensor(image)
+        mask_tensor = torch.from_numpy(np.array(mask)).long()
         category_tensor = (
             torch.tensor(category, dtype=torch.long)
         ) - 1  # convert to 0-indexed (0 is tumor, 1 is normal)
