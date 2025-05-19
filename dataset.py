@@ -61,6 +61,11 @@ class BrainTumorDataset(Dataset):
                 angle = np.random.randint(-30, 30)
                 image = transforms.functional.rotate(image, angle)
                 mask = transforms.functional.rotate(mask, angle)
+            if np.random.rand() > 0.5:
+                brightness_factor = np.random.uniform(0.7, 1.3)
+                contrast_factor = np.random.uniform(0.7, 1.3)
+                image = transforms.functional.adjust_brightness(image, brightness_factor)
+                image = transforms.functional.adjust_contrast(image, contrast_factor)
 
         # print(f"Mask area: {mask.sum()}, Truth area: {sample['area']}") # check if the mask area matches the truth area of the tumor
 
