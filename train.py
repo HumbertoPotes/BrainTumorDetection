@@ -12,11 +12,11 @@ def train(
     exp_dir: str = "logs",
     num_epoch: int = 200,
     lr: float = 1e-3,
-    batch_size: int = 16,
+    batch_size: int = 8,
     augment: bool = True,
-    pos_w: float = 0.5,
-    alpha: float = 0.9,
-    beta: float = 0.5,
+    pos_w: float = 0.5, # weight for positive (tumorous) class in BCE loss
+    alpha: float = 0.999, # weight for loss function
+    beta: float = 0.5, # weight for IoU function
     stdev_multiplier: float = 3.5,
 ):
     print("Starting training...")

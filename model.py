@@ -19,11 +19,7 @@ class ConvTumorDetector(nn.Module):
                 nn.ReLU(),
             )
 
-            # residual connection
-            if in_channels != out_channels:
-                self.skip = nn.Conv2d(in_channels, out_channels, 1, 2, 0)
-            else:
-                self.skip = nn.Identity()
+            self.skip = nn.Conv2d(in_channels, out_channels, 1, stride) if in_channels != out_channels else nn.Identity()
 
         def forward(self, x: torch.Tensor) -> torch.Tensor:
             return self.skip(x) + self.model(x)
@@ -43,20 +39,23 @@ class ConvTumorDetector(nn.Module):
                     padding,
                     output_padding=1,
                 ),
+                nn.GroupNorm(1, out_channels),
                 nn.ReLU(),
                 nn.ConvTranspose2d(
                     out_channels,
-                    out_channels // 2,
+                    out_channels,
                     kernel_size,
-                    stride,
+                    1,
                     padding,
-                    output_padding=1,
                 ),
-                nn.ReLU(),
+                nn.GroupNorm(1, out_channels),
+                nn.ReLU()
             )
+        
+            self.skip = nn.ConvTranspose2d(in_channels, out_channels, 1, stride, output_padding=1) if in_channels != out_channels else nn.Identity()
 
         def forward(self, x: torch.Tensor) -> torch.Tensor:
-            return self.model(x)
+            return self.skip(x) + self.model(x)
 
     def __init__(
         self,
@@ -67,7 +66,7 @@ class ConvTumorDetector(nn.Module):
 
         h = 640
         w = 640
-        out_channels = 16
+        out_channels = 32
         down_layers = 4
 
         # layers = [
@@ -77,24 +76,25 @@ class ConvTumorDetector(nn.Module):
         # in_channels = out_channels
         layers = []
         for _ in range(0, down_layers):
-            out_channels = out_channels * 2
             layers.append(self.DownBlock(in_channels, out_channels))
             in_channels = out_channels
+            out_channels = out_channels * 2
 
         self.network = torch.nn.Sequential(*layers)
 
         layers = []
 
-        for _ in range(0, down_layers // 2):
+        for _ in range(0, down_layers - 1):
             out_channels = in_channels // 2
             layers.append(self.UpBlock(in_channels, out_channels))
-            in_channels = out_channels // 2
+            in_channels = out_channels
 
         self.segmentation_head = torch.nn.Sequential(
-            *layers, torch.nn.Conv2d(in_channels, num_classes, kernel_size=1)
+            *layers, torch.nn.ConvTranspose2d(in_channels, num_classes, 1, stride=2, output_padding=1)
         )
         self.category_head = nn.Sequential(
-            nn.Flatten(), nn.Linear(in_channels * h * w // (2 ** (down_layers)), 1)
+            nn.Flatten(), 
+            nn.Linear(in_channels * h * w // (2 ** (down_layers+1)), 1)
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
