@@ -10,9 +10,14 @@ from metrics import accuracy, masks_to_iou
 
 def train(
     exp_dir: str = "logs",
-    num_epoch: int = 50,
+    num_epoch: int = 200,
     lr: float = 1e-3,
-    batch_size: int = 16,
+    batch_size: int = 8,
+    augment: bool = True,
+    pos_w: float = 0.5, # weight for positive (tumorous) class in BCE loss
+    alpha: float = 0.999, # weight for loss function
+    beta: float = 0.5, # weight for IoU function
+    stdev_multiplier: float = 3.5,
 ):
     print("Starting training...")
     writer = SummaryWriter()
@@ -39,7 +44,7 @@ def train(
     dataset = load_dataset("dwb2023/brain-tumor-image-dataset-semantic-segmentation")
 
     # load the training dataset
-    train_dataset = BrainTumorDataset(dataset["train"])
+    train_dataset = BrainTumorDataset(dataset["train"], augment=augment)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_dataset = BrainTumorDataset(dataset["valid"])
     val_loader = DataLoader(val_dataset, batch_size=batch_size)
@@ -53,12 +58,6 @@ def train(
             {"params": net.category_head.parameters(), "lr": lr / 100},
         ]
     )
-
-    # hyperparameters
-    pos_w = 0.5
-    alpha = 0.9
-    beta = 0.5
-    stdev_multiplier = 3.5
 
     print(f"Starting training for {num_epoch} epochs")
     for epoch in range(num_epoch):
