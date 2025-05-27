@@ -4,3 +4,4 @@ logs/
 runs/
 __pycache__/
 config.json
+*.html
